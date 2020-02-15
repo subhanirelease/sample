@@ -1,0 +1,87 @@
+pipeline {
+agent any
+   stages {
+
+      stage('Checkout') {
+         steps {
+            echo 'checkout done'
+         }
+      }
+
+      stage('Compile') {
+          steps {
+              echo 'compile done'
+          }
+      }
+
+      stage ('Test') {
+          steps {
+              echo 'cmd to invoke test'
+          }
+      }
+      
+      stage('Build Docker Image with Kaniko') {
+      steps {
+	echo 'docker image done'        
+      }
+    }
+    
+    stage('Deploy to k8s cluster') {
+  steps {
+	echo 'deploy to staging done'
+            }
+    }
+    
+ /* option 1 without timer
+ stage('Approve to PROD DEPLOY') {
+	steps {
+             input('Do you want to proceed?')
+    }
+ }
+
+stage('If Proceed is clicked') {
+            steps {
+                print('Approved to PROD DEPLOY')
+            }
+        }*/
+   
+   //option 2 with timer
+   stage('Approve to PROD DEPLOY?') {
+    steps {
+       // timeout ( time: 20, unit: "HOURS" )
+        script {
+		try {
+              timeout(time:15, unit:'SECONDS') {
+            // Define Variable
+             def USER_INPUT = input(
+                    message: 'Input Required - Approve PROD DEPLOY?',
+                    parameters: [
+                            [$class: 'ChoiceParameterDefinition',
+                             choices: ['Approve','Reject'].join('\n'),
+                             name: 'input',
+                             description: 'Approve or Reject PROD DEPLOY']
+                    ])
+            echo "The input is: ${USER_INPUT}"
+            
+            if( "${USER_INPUT}" == "Approve"){
+                echo 'PROD DEPLOY APPROVED'
+                echo 'PROD DEPLOY COMPLETE'
+            }
+            
+            else if( "${USER_INPUT}" == "Reject"){
+                echo 'PROD DEPLOY REJECTED'
+            }
+            
+          }
+		} catch(err) {
+		//echo 'INPUT TIME EXPIRED!'
+		//exit 1
+		//current.Build.result = 'FAILURE'
+		error("INPUT TIME EXPIRED!")
+        }
+      }
+   }
+   }
+}
+
+}
